@@ -6,7 +6,7 @@ The https://github.com/IBMStockTrader[IBMStockTrader] application rebuilt with h
 
 * https://try.openshift.com[OpenShift4 Cluster]
 * https://www.docker.com/products/docker-desktop[Docker for Mac/Windows/Liux]
-* https://github.com/mikefarah/yq[yq tool]
+* https://stedolan.github.io/jq/[jq tool]
 
 == Prepare Cluster
 
@@ -16,6 +16,8 @@ Ensure the following operators are installed in cluster:
 - https://operatorhub.io/operator/keycloak-operator[Keycloak]
 
 [NOTE]: In OpenShift the operators can be installed via Operator Hub integration from Administrator console.
+
+[NOTE]: Make sure you install Keycloak into the keycloak namespace
 
 == Clone the sources
 
@@ -35,7 +37,7 @@ cd $PROJECT_HOME
 
 [source,bash]
 ----
-oc apply -k k8s/keycloak
+oc apply -k k8s/keycloak/base/
 ----
 
 [IMPORTANT]
@@ -55,8 +57,8 @@ To retrieve the Keycloak `ADMIN_USERNAME` and `ADMIN_PASSWORD` run the following
 
 [source,bash]
 ----
-export ADMIN_USERNAME=$(kubectl get secrets credential-stocktrader-keycloak -oyaml | yq e - '.data.ADMIN_USERNAME' | base64 -d)
-export ADMIN_PASSWORD=$(kubectl get secrets credential-stocktrader-keycloak -oyaml | yq e - '.data.ADMIN_PASSWORD' | base64 -d)
+export ADMIN_USERNAME=$(oc get secrets credential-stocktrader-keycloak -n keycloak -ojson | jq -r '.data.ADMIN_USERNAME'| base64 -d)
+export ADMIN_PASSWORD=$(oc get secrets credential-stocktrader-keycloak -n keycloak -ojson | jq -r '.data.ADMIN_PASSWORD' | base64 -d)
 ----
 
 You can find the Keycloak web console url using the command `oc get -n keycloak routes`.
