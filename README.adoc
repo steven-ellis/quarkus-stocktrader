@@ -5,7 +5,7 @@ The https://github.com/IBMStockTrader[IBMStockTrader] application rebuilt with h
 == Pre-requisites
 
 * https://try.openshift.com[OpenShift4 Cluster]
-* https://www.docker.com/products/docker-desktop[Docker for Mac/Windows/Liux]
+* https://www.docker.com/products/docker-desktop[Docker for Mac/Windows/Linux]
 * https://stedolan.github.io/jq/[jq tool]
 * https://kustomize.io/[kustomize]
 
@@ -14,17 +14,17 @@ The https://github.com/IBMStockTrader[IBMStockTrader] application rebuilt with h
 Ensure the following operators are installed in cluster:
 
 - https://www.redhat.com/en/resources/amq-streams-datasheet[Red Hat AMQ Streams]
-- https://operatorhub.io/operator/keycloak-operator[Keycloak]
+- https://operatorhub.io/operator/keycloak-operator[Keycloak] or Red Hat SSO Operator
 
-[NOTE]: In OpenShift the operators can be installed via Operator Hub integration from Administrator console.
+*NOTE*: In OpenShift the operators can be installed via Operator Hub integration from Administrator console.
 
-[NOTE]: Make sure you install Keycloak into the keycloak namespace
+*NOTE*: Make sure you install Keycloak into the keycloak namespace
 
 == Clone the sources
 
 [source,bash]
 ----
-git clone https://github.com/kameshsampath/quarkus-stocktrader
+git clone https://github.com/steven-ellis/quarkus-stocktrader
 ----
 
 We will refer to the cloned project sources folder as `$PROJECT_HOME`.
@@ -34,11 +34,32 @@ We will refer to the cloned project sources folder as `$PROJECT_HOME`.
 cd $PROJECT_HOME
 ----
 
+== Login to OpenShift
+
+Make sure you're **oc** client is logged into your target OpenShift cluter. A useful check is
+
+[source,shell script]
+----
+oc get clusterversion
+# or
+oc whoami 
+oc whoami --show-server
+----
+
 == Deploy Keycloak
+
+For more details on using Keycloak with OpenShift reference https://www.keycloak.org/getting-started/getting-started-openshift
 
 [source,bash]
 ----
-oc apply -k k8s/keycloak/base/
+oc apply -k k8s/keycloak
+----
+
+This might take several minutes to deploy - which you can monitor via
+
+[source,bash]
+----
+watch oc get pods -n keycloak
 ----
 
 Because of the limitations with Keycloak Operator, the roles needs to be manually created by login into the Keycloak console.
@@ -61,6 +82,17 @@ export ADMIN_PASSWORD=$(oc get secrets credential-stocktrader-keycloak -n keyclo
 
 You can find the Keycloak web console url using the command `oc get -n keycloak routes`.
 
+[source,bash]
+----
+KEYCLOAK_URL=https://$(oc get route keycloak --template='{{ .spec.host }}')/auth &&
+echo "" &&
+echo "Keycloak:                 $KEYCLOAK_URL" &&
+echo "Keycloak Admin Console:   $KEYCLOAK_URL/admin" &&
+echo "Keycloak Account Console: $KEYCLOAK_URL/realms/myrealm/account" &&
+echo "" &&
+echo "Credentials ${ADMIN_USERNAME} : ${ADMIN_PASSWORD}" &&
+echo "" 
+----
 
 == Deploy Kafka
 
