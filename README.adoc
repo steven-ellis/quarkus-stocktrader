@@ -184,6 +184,21 @@ kustomize build $PROJECT_HOME/k8s/db/prod | oc apply -f -
 
 Login to the database admin console using user `traderdb` and password `traderdb` and import the link:./db/schema.sql[schema].
 
+To get the route to the console type
+
+[source,bash]
+----
+echo "https://$(oc get route -n daytrader db-adminer -o jsonpath='{.spec.host}')"
+----
+
+*OR* import directly as follows
+
+[source,bash]
+----
+PSQL_POD=$(oc get pods -n daytrader -l "app=postgresql" -o jsonpath='{.items[0].metadata.name}')
+oc -n daytrader rsh ${PSQL_POD} psql -d tradedb < db/schema.sql
+----
+
 === API Key
 
 Obtain an API Key from https://iexcloud.io/[IEXCloud], copy the file  link:./k8s/stock-quote/base/api-keys.env.example[ $PROJECT_HOME/k8s/stock-quote/base/api-keys.env.example] to
@@ -255,8 +270,9 @@ As `tradr` is a static Single Page Application, it is required to update the env
 
 [source,bash]
 ----
-cd $PROJECT_HOME/tradr
-envsubst `$PROJECT_HOME/tradr/.env.example` > `$PROJECT_HOME/tradr/.env`
+export KEYCLOAK_ROUTE
+cd ${PROJECT_HOME}/tradr
+envsubst  < ${PROJECT_HOME}/tradr/.env.example > ${PROJECT_HOME}/tradr/.env
 cd ..
 make tradr_image_build_push
 ----
