@@ -17,12 +17,12 @@ deploy_keycloak ()
 
 
 
-get_keyclock_auth ()
+get_keycloak_auth ()
 {
     export ADMIN_USERNAME=$(oc get secrets credential-stocktrader-keycloak -n keycloak -ojson | jq -r '.data.ADMIN_USERNAME'| base64 -d)
     export ADMIN_PASSWORD=$(oc get secrets credential-stocktrader-keycloak -n keycloak -ojson | jq -r '.data.ADMIN_PASSWORD' | base64 -d)
 
-    KEYCLOAK_URL=https://$(oc get route keycloak --template='{{ .spec.host }}')/auth &&
+    KEYCLOAK_URL=https://$(oc get route keycloak -n keycloak --template='{{ .spec.host }}')/auth &&
     echo "" &&
     echo "Keycloak:                 $KEYCLOAK_URL" &&
     echo "Keycloak Admin Console:   $KEYCLOAK_URL/admin" &&
@@ -30,14 +30,14 @@ get_keyclock_auth ()
     echo "" &&
     echo "Credentials ${ADMIN_USERNAME} : ${ADMIN_PASSWORD}" &&
     echo ""
-    echo "Getting an auth token from keyclock"
+    echo "Getting an auth token from keycloak"
 
     CLIENT_ID=admin-cli
     GRANT_TYPE=password
     KEYCLOAK_AUTH_TOKEN=$( curl -d "client_id=$CLIENT_ID" -d "username=${ADMIN_USERNAME}" -d "password=${ADMIN_PASSWORD}" -d "grant_type=$GRANT_TYPE" "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" | jq '.access_token' | sed s/\"//g)
 }
 
-create_keyclock_roles ()
+create_keycloak_roles ()
 {
 
     echo "Existing roles in ${AUTH_REALM}"
@@ -59,8 +59,42 @@ create_keyclock_roles ()
 
 }
 
+# We need to create the client config for our tradr app
+create_keycloak_client ()
+{
+
+    # Debug code to pull existing clients back
+    #curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/clients \
+      #-H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+    #| jq . -
+
+    TRADR_URL=https://$(oc get route tradr -n daytrader --template='{{ .spec.host }}')
+
+    echo "Creating our Keycloak client config for the tradr app"
+
+        JSON="
+{
+    \"clientId\": \"tradr\",
+    \"rootUrl\": \"${TRADR_URL}\",
+    \"redirectUris\":
+    [
+        \"*\"
+    ]
+}
+"
+	#echo $JSON
+	#echo $JSON | jq . -
+        curl -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/clients \
+          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+          -H 'Content-Type: application/json' \
+          -d "${JSON}"
+
+
+}
+
 # deploy_keycloak
-get_keyclock_auth 
-create_keyclock_roles
+get_keycloak_auth 
+#create_keycloak_roles
+create_keycloak_client
 
 
