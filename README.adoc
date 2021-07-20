@@ -8,6 +8,9 @@ The https://github.com/IBMStockTrader[IBMStockTrader] application rebuilt with h
 * https://www.docker.com/products/docker-desktop[Docker for Mac/Windows/Linux]
 * https://stedolan.github.io/jq/[jq tool]
 * https://kustomize.io/[kustomize]
+* https://adoptopenjdk.net/[Java 11]
+* https://maven.apache.org[Maven 3.6.3+]
+* https://www.gnu.org/software/gettext/[gettext]
 
 == Prepare Cluster
 
