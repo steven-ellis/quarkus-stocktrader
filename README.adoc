@@ -13,8 +13,9 @@ The https://github.com/IBMStockTrader[IBMStockTrader] application rebuilt with h
 
 Ensure the following operators are installed in cluster:
 
-- https://www.redhat.com/en/resources/amq-streams-datasheet[Red Hat AMQ Streams]
-- https://operatorhub.io/operator/keycloak-operator[Keycloak] or Red Hat SSO Operator
+* https://www.redhat.com/en/resources/amq-streams-datasheet[Red Hat AMQ Streams]
+** *NOTE* Only version 1.6.x is supported at present
+* https://operatorhub.io/operator/keycloak-operator[Keycloak] or Red Hat SSO Operator
 
 *NOTE*: In OpenShift the operators can be installed via Operator Hub integration from Administrator console.
 
