@@ -112,14 +112,14 @@ oc apply -k k8s/kafka/prod
 This should be done only on the *target* clusters, i.e. the clusters where the topics/data needs to mirrored, from the Kafka Cluster where sampledaytrader8 is deployed.
 ====
 
-Copy the link:./k8s/kafka-mirrormaker/daytrader-mirrormaker-example.yaml[$PROJECT_HOME/k8s/kafka-mirrormaker/daytrader-mirrormaker-example.yaml] to `$PROJECT_HOME/k8s/kafka-mirrormaker/daytrader-mirrormaker.yaml`:
+Copy the link:./k8s/kafka-mirrormaker/base/daytrader-mirrormaker-example.yaml[$PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker-example.yaml] to `$PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml`:
 
 [source,bash]
 ----
-cp $PROJECT_HOME/k8s/kafka-mirrormaker/daytrader-mirrormaker-example.yaml  $PROJECT_HOME/k8s/kafka-mirrormaker/daytrader-mirrormaker.yaml
+cp $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker-example.yaml  $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml
 ----
 
-Edit and update the `$PROJECT_HOME/k8s/kafka-mirrormaker/daytrader-mirrormaker.yaml` for Kafka cluster external bootstrapserver LoadBalancer IP Address.
+Edit and update the `$PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml` for Kafka cluster external bootstrapserver LoadBalancer IP Address.
 
 The Kafka cluster *bootstrapservers* can be retrieved using the command:
 
@@ -127,7 +127,7 @@ The Kafka cluster *bootstrapservers* can be retrieved using the command:
 ==== Legacy Cluster 
 
 The legacy cluster is identified by alias `daytrader-kafka-legacy` in the file
-`$PROJECT_HOME/k8s/kafka-mirrormaker/daytrader-mirrormaker.yaml`, and the bootstrap address found by the following command need to be updated as the value for `daytrader-kafka-legacy.bootstrapServers`:
+`$PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml`, and the bootstrap address found by the following command need to be updated as the value for `daytrader-kafka-legacy.bootstrapServers`:
 
 [source,bash]
 ----
@@ -149,7 +149,7 @@ oc get svc -n daytrader daytrader-kafka-external-bootstrap \
 ==== Modern App Cluster 
 
 The legacy cluster is identified by alias `daytrader-kafka-modern` in the file
-`$PROJECT_HOME/k8s/kafka-mirrormaker/daytrader-mirrormaker.yaml`, and the bootstrap address found by the following command need to be updated as the value for `daytrader-kafka-modern.bootstrapServers`:
+`$PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml`, and the bootstrap address found by the following command need to be updated as the value for `daytrader-kafka-modern.bootstrapServers`:
 
 [source,bash]
 ----
@@ -182,7 +182,7 @@ kustomize build $PROJECT_HOME/k8s/stock-quote/prod | oc apply -f -
 kustomize build $PROJECT_HOME/k8s/db/prod | oc apply -f -
 ----
 
-Login to the database admin console using user `traderdb` and password `traderdb` and import the link:.db/schema.sql[schema].
+Login to the database admin console using user `traderdb` and password `traderdb` and import the link:./db/schema.sql[schema].
 
 === API Key
 
