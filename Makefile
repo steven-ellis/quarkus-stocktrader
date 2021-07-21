@@ -19,8 +19,8 @@ clean:
 
 qsq_jvm_image_build_push:		install_jars
 	@mvn -pl quarkus-stock-quote -DskipTests k8s:push
-	@docker tag $(IMAGE_REPO)/quarkus-stock-quote:"$(APP_VERSION)" $(IMAGE_REPO)/quarkus-stock-quote
-	@docker push "$(IMAGE_REPO)"/quarkus-stock-quote
+	@buildah tag $(IMAGE_REPO)/quarkus-stock-quote:"$(APP_VERSION)" $(IMAGE_REPO)/quarkus-stock-quote
+	@buildah push "$(IMAGE_REPO)"/quarkus-stock-quote
 
 ##################################################################
 ### Quarkus Portfolio
@@ -28,8 +28,8 @@ qsq_jvm_image_build_push:		install_jars
 
 qp_jvm_image_build_push:	install_jars
 	@mvn -pl quarkus-portfolio -DskipTests  k8s:push
-	@docker tag $(IMAGE_REPO)/quarkus-portfolio:"$(APP_VERSION)" $(IMAGE_REPO)/quarkus-portfolio
-	@docker push $(IMAGE_REPO)/quarkus-portfolio
+	@buildah tag $(IMAGE_REPO)/quarkus-portfolio:"$(APP_VERSION)" $(IMAGE_REPO)/quarkus-portfolio
+	@buildah push $(IMAGE_REPO)/quarkus-portfolio
 
 ##################################################################
 ### Trade Orders Service
@@ -37,18 +37,18 @@ qp_jvm_image_build_push:	install_jars
 
 tos_jvm_image_build_push:	install_jars
 	@mvn -pl trade-orders-service -DskipTests k8s:push
-	@docker tag $(IMAGE_REPO)/trade-orders-service:"$(APP_VERSION)" $(IMAGE_REPO)/trade-orders-service
-	@docker push $(IMAGE_REPO)/trade-orders-service
+	@buildah tag $(IMAGE_REPO)/trade-orders-service:"$(APP_VERSION)" $(IMAGE_REPO)/trade-orders-service
+	@buildah push $(IMAGE_REPO)/trade-orders-service
 
 ##################################################################
 ### Tradr
 ##################################################################
 
 tradr_image_build_push:	
-	@docker build --no-cache -t $(IMAGE_REPO)/tradr:"$(TRADR_VERSION)" -f tradr/Dockerfile tradr
-	@docker push $(IMAGE_REPO)/tradr:"$(TRADR_VERSION)"
-	@docker tag $(IMAGE_REPO)/tradr:"$(TRADR_VERSION)" $(IMAGE_REPO)/tradr
-	@docker push $(IMAGE_REPO)/tradr
+	@buildah build --no-cache -t $(IMAGE_REPO)/tradr:"$(TRADR_VERSION)" -f tradr/Dockerfile tradr
+	@buildah push $(IMAGE_REPO)/tradr:"$(TRADR_VERSION)"
+	@buildah tag $(IMAGE_REPO)/tradr:"$(TRADR_VERSION)" $(IMAGE_REPO)/tradr
+	@buildah push $(IMAGE_REPO)/tradr
 
 update_tradr_deployment_image:
 	yq eval -i '.spec.template.spec.containers[0].image="$(IMAGE_REPO)/tradr"' k8s/tradr/base/deployment.yaml
