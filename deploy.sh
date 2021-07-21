@@ -8,6 +8,49 @@
 #  - https://suedbroecker.net/2021/07/16/upload-an-user-to-keycloak-using-curl/
 
 AUTH_REALM=stocktrader
+PROJECT_HOME=`pwd`
+OCP_NAMESPACE=daytrader
+
+# oc_wait_for 
+#
+# $1 = [pod|node]
+# $2 = app-name
+# $3 = [app|name|role] - defaults to app
+# $4 = namespace - defailts to ${OCP_NAMESPACE}
+#
+# EG
+#    oc_wait_for pod rook-ceph-mon
+#
+oc_wait_for ()
+{
+    TYPE=${3:-app}
+    NAMESPACE=${4:-$OCP_NAMESPACE}
+
+    echo "Waiting for the ${1}s tagged ${2} = ready"
+    oc wait --for condition=ready ${1} -l ${TYPE}=${2} -n ${NAMESPACE} --timeout=400s
+}
+
+
+# check_oc_login
+#
+# Make sure we're logged into OCP and grab our API endpoint
+#
+check_oc_login ()
+{
+    #OC_TOKEN=`oc whoami -t`
+    OCP_USER=`oc whoami | sed "s/://"`
+
+    OCP_ENDPOINT=`oc whoami --show-server`
+
+    if [ "${OCP_USER}" == "" ]; then
+      echo "You aren't logged into OpenShift at ${OCP_ENDPOINT}"
+      exit 1
+    else
+
+      echo "You are logged into OpenShift as $OCP_USER at ${OCP_ENDPOINT}"
+    fi
+}
+
 
 deploy_keycloak ()
 {
@@ -92,9 +135,50 @@ create_keycloak_client ()
 
 }
 
-# deploy_keycloak
+
+deploy_database ()
+{
+    
+    kustomize build $PROJECT_HOME/k8s/db/prod | oc apply -f -
+
+    # Need to implement a delay here while we wait for psql to load
+    oc_wait_for  pod postgresql  app 
+
+    # Importing DB Schema
+    PSQL_POD=$(oc get pods -n daytrader -l "app=postgresql" -o jsonpath='{.items[0].metadata.name}')
+    oc -n daytrader rsh ${PSQL_POD} psql -d tradedb < db/schema.sql
+}
+
+deploy_apps ()
+{
+
+    kustomize build $PROJECT_HOME/k8s/stock-quote/prod | oc apply -f -
+
+    kustomize build $PROJECT_HOME/k8s/portfolio/prod | oc apply -f -
+
+  
+    KEYCLOAK_ROUTE=$(oc get route -n keycloak keycloak -o=jsonpath='{.spec.host}')
+    oc set env -n daytrader deploy/quarkus-portfolio QUARKUS_OIDC_AUTH_SERVER_URL="https://$KEYCLOAK_ROUTE/auth/realms/stocktrader"
+    echo "Wait 5 seconds for quarkus-portfolio to re-deploy"
+    sleep 5s
+
+    oc_wait_for pod quarkus-stock-quote app 
+    oc_wait_for pod quarkus-portfolio   app 
+
+    kustomize build $PROJECT_HOME/k8s/trade-orders-service/prod | oc apply -f -
+
+    oc_wait_for pod trade-orders-service  app 
+
+}
+
+
+
+check_oc_login
+deploy_keycloak
 get_keycloak_auth 
-#create_keycloak_roles
+create_keycloak_roles
 create_keycloak_client
 
+deploy_database
+deploy_apps
 
