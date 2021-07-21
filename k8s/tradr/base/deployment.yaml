@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: tradr
-          image: quay.io/kameshsampath/tradr
+          image: quay.io/sellisnz/tradr
           imagePullPolicy: Always
           env:
             - name: PORT

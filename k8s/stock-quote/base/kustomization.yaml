@@ -4,8 +4,8 @@ generatorOptions:
   
 secretGenerator:
   - name: quarkus-portfolio
-    envs:
-      - api-keys.env
+    env: api-keys.env
+    type: Opaque
 resources:
   - deployment.yaml
   - service.yaml
