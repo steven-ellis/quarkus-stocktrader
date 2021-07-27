@@ -170,7 +170,7 @@ oc get svc -n daytrader daytrader-kafka-external-bootstrap \
 
 [source,bash]
 ----
-kustomize build $PROJECT_HOME/k8s/stock-quote/prod | oc apply -f -
+kustomize build $PROJECT_HOME/k8s/kafka-mirrormaker/prod | oc apply -f -
 ----
 
 == Deploy Modules
