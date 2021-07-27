@@ -8,9 +8,9 @@ spec:
   connectCluster: "daytrader-kafka-modern"
   clusters:
     - alias: "daytrader-kafka-legacy"
-      bootstrapServers: "<external bootstrap address>:9094"
+      bootstrapServers: "<legacy bootstrap address>:9094"
     - alias: "daytrader-kafka-modern"
-      bootstrapServers: "<external bootstrap address>:9094"
+      bootstrapServers: "<modern bootstrap address>:9094"
   mirrors:
     - sourceCluster: "daytrader-kafka-legacy"
       targetCluster: "daytrader-kafka-modern"
