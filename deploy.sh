@@ -52,10 +52,21 @@ check_oc_login ()
 }
 
 
+# Selected files need to be pre-configured before deployment
+#
+pre_checks ()
+{
+    echo
+
+}
+
 deploy_keycloak ()
 {
     oc apply -k k8s/keycloak
-    watch oc get pods -n keycloak
+
+    echo "Wait 5 seconds for keycloak to finish deploying and then check status"
+    sleep 5s
+    oc_wait_for pod keycloak  app  keycloak
 }
 
 
@@ -102,6 +113,80 @@ create_keycloak_roles ()
 
 }
 
+create_keycloak_user ()
+{
+
+    echo "Existing users in ${AUTH_REALM}"
+    curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
+      -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+    | jq . -
+
+JSON='
+{
+   "username": "user1",
+   "enabled": true,
+   "emailVerified": false,
+   "firstName": "dummy",
+   "lastName": "user",
+   "credentials": [
+       {
+           "type": "password",
+           "value": "password*",
+           "temporary": false
+       }
+   ]
+}'
+
+   echo JSON  ${JSON}
+
+    echo "Creating our Keycloak user user1"
+
+        #JSON="{\"name\": \"$new_role\"}"
+        curl -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
+          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+          -H 'Content-Type: application/json' \
+          -d "${JSON}"
+
+#          -d '{"firstName":"Dummy","lastName":"User", "email":"test@test.com", "enabled":"true", "username":"user1", "realmRoles":["api-admins"]}'
+
+
+    USER_ID=$(curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
+              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+            | jq  -r '.[] | select(.username=="user1") | .id')
+
+    echo "User user1 has ID ${USER_ID}"
+
+    curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
+              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+    | jq . -
+
+    ROLE_ID=$(curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
+              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+            | jq  -r '.[] | select(.name=="api-admins") | .id')
+
+    echo "Role api-admins has ID ${ROLE_ID}"
+
+        JSON="
+[
+  {
+    \"id\": \"${ROLE_ID}\",
+    \"name\": \"api-admins\"
+  }
+]
+
+"
+
+    echo "Add role api-admins to user user1"
+    echo "Using JSON ${JSON}"
+
+        curl -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users/${USER_ID}/role-mappings/realm \
+          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+          -H 'Content-Type: application/json' \
+          -d "${JSON}"
+
+}
+
+
 # We need to create the client config for our tradr app
 create_keycloak_client ()
 {
@@ -136,6 +221,46 @@ create_keycloak_client ()
 }
 
 
+deploy_kafka ()
+{
+
+    oc apply -k k8s/kafka/prod
+
+}
+
+
+# We need to update the entries in the file
+#  $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker-example.yaml
+# and save it as
+#  $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml
+#
+kafka_mirror_maker ()
+{
+
+    # If we're not on AWS this should be non-zero
+    KAFKA_ROUTE=$(oc get svc -n daytrader daytrader-kafka-external-bootstrap \
+                  -n daytrader
+                  -ojsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+    if [ "${KAFKA_ROUTE}" = "" ]; then
+        KAFKA_ROUTE=$(oc get svc -n daytrader daytrader-kafka-external-bootstrap \
+                      -n daytrader
+                      -ojsonpath='{.status.loadBalancer.ingress[0].hostname}')
+         echo "Running on AWS"
+    else
+         echo "Not on AWS"
+    fi
+    echo "Kafka Route = ${KAFKA_ROUTE}"
+ 
+    cat $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker-example.yaml |\
+    sed "s/<legacy bootstrap address>/20.197.67.109/" |\
+    sed "s/<modern bootstrap address>/${KAFKA_ROUTE}/" |\
+    cat > $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml
+
+    # Deploy mirror maker
+    kustomize build $PROJECT_HOME/k8s/kafka-mirrormaker/prod | oc apply -f -
+}
+    
 deploy_database ()
 {
     
@@ -149,6 +274,17 @@ deploy_database ()
     oc -n daytrader rsh ${PSQL_POD} psql -d tradedb < db/schema.sql
 }
 
+
+# This will also delete the namespace and is usually sufficient should
+# we need to clean up the environment for a fresh install
+#
+delete_database ()
+{
+
+    kustomize build $PROJECT_HOME/k8s/db/prod | oc delete -f -
+
+}
+
 deploy_apps ()
 {
 
@@ -158,7 +294,8 @@ deploy_apps ()
 
   
     KEYCLOAK_ROUTE=$(oc get route -n keycloak keycloak -o=jsonpath='{.spec.host}')
-    oc set env -n daytrader deploy/quarkus-portfolio QUARKUS_OIDC_AUTH_SERVER_URL="https://$KEYCLOAK_ROUTE/auth/realms/stocktrader"
+    oc set env -n daytrader deploy/quarkus-portfolio
+    QUARKUS_OIDC_AUTH_SERVER_URL="https://$KEYCLOAK_ROUTE/auth/realms/stocktrader"
     echo "Wait 5 seconds for quarkus-portfolio to re-deploy"
     sleep 5s
 
@@ -168,17 +305,66 @@ deploy_apps ()
     kustomize build $PROJECT_HOME/k8s/trade-orders-service/prod | oc apply -f -
 
     oc_wait_for pod trade-orders-service  app 
+    
+    sleep 2s
+    #oc_wait_for route trade-orders  app 
+ 
+    echo "We currently assume the Tradr app has been uploaded to Quay"
+    kustomize build $PROJECT_HOME/k8s/tradr/prod | oc apply -f -
+    oc_wait_for pod tradr  app 
+
 
 }
 
 
+check_status ()
+{
+    export TRADER_ROUTE="https://$(oc get route -n ${OCP_NAMESPACE} tradr -o jsonpath='{.spec.host}')"
+
+    echo ""
+    echo "You should now be able to access the modern application on"
+    echo $TRADER_ROUTE
+
+
+    export KAFKA_ROUTE="https://$(oc get route -n ${OCP_NAMESPACE} trader-orders -o jsonpath='{.spec.host}')"
+
+    echo ""
+    echo "And the Kafka Data Replication App at "
+    echo $TRADER_ROUTE
+
+
+}
 
 check_oc_login
-deploy_keycloak
-get_keycloak_auth 
-create_keycloak_roles
-create_keycloak_client
 
-deploy_database
-deploy_apps
+case "$1" in
+  deploy)
+        #deploy_keycloak
+        get_keycloak_auth 
+        #create_keycloak_roles
+
+        deploy_kafka
+        kafka_mirror_maker 
+
+
+        deploy_database
+        deploy_apps
+
+        create_keycloak_client
+        create_keycloak_user 
+        check_status
+
+        ;;
+  status)
+        check_status
+        get_keycloak_auth 
+        ;;
+  delete|cleanup|remove)
+        delete_database
+        ;;
+  *)
+        echo "Usage: $N {setup|status|remove|cleanup}" >&2
+        exit 1
+        ;;
+esac
 
