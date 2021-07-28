@@ -150,7 +150,7 @@ JSON='
    "credentials": [
        {
            "type": "password",
-           "value": "password*",
+           "value": "password",
            "temporary": false
        }
    ]
@@ -225,9 +225,16 @@ create_keycloak_client ()
 {
     \"clientId\": \"tradr\",
     \"rootUrl\": \"${TRADR_URL}\",
+    \"adminUrl\": \"${TRADR_URL}\",
+    \"directAccessGrantsEnabled\": true,
+    \"publicClient\": true,
     \"redirectUris\":
     [
-        \"*\"
+        \"${TRADR_URL}/*\"
+    ],
+    \"webOrigins\":
+    [
+        \"${TRADR_URL}\"
     ]
 }
 "
@@ -370,7 +377,7 @@ check_status ()
 
     echo ""
     echo "And the Kafka Data Replication App at "
-    echo $TRADER_ROUTE
+    echo $KAFKA_ROUTE
 
 
 }
@@ -398,7 +405,10 @@ case "$1" in
         create_keycloak_client
         create_keycloak_user 
         check_status
-
+        ;;
+  test)
+        get_keycloak_auth 
+        create_keycloak_client
         ;;
   status)
         check_status
