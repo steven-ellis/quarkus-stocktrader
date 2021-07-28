@@ -243,7 +243,8 @@ Run the following command to update the deployment:
 [source,bash]
 ----
 KEYCLOAK_ROUTE=$(oc get route -n keycloak keycloak -o=jsonpath='{.spec.host}')
-oc set env -n daytrader deploy/quarkus-portfolio QUARKUS_OIDC_AUTH_SERVER_URL="https://$KEYCLOAK_ROUTE/auth/realms/stocktrader"
+oc set env -n daytrader deploy/quarkus-portfolio  \
+   QUARKUS_OIDC_AUTH_SERVER_URL="https://$KEYCLOAK_ROUTE/auth/realms/stocktrader"
 ----
 
 And now check the pod to be restarted:
