@@ -62,17 +62,32 @@ pre_checks ()
 
 deploy_keycloak ()
 {
+    echo "======= deploy_keycloak ========"
+
     oc apply -k k8s/keycloak
 
-    echo "Wait 5 seconds for keycloak to finish deploying and then check status"
-    sleep 5s
+    echo "Wait 10 seconds for keycloak to finish deploying and then check status"
+    sleep 10s
     oc_wait_for pod keycloak  app  keycloak
+    echo ""
+    echo "Wait 10 seconds for the realm to populate"
+    sleep 10s
 }
 
+delete_keycloak ()
+{
+    echo "======= delete_keycloak ========"
+    echo "NOTE we don't remove the operator or the namespace"
+    echo "only the realm and deployment"
 
+    oc delete -n keycloak -f k8s/keycloak/realm.yaml
+    oc delete -n keycloak -f k8s/keycloak/deployment.yaml
+}
 
 get_keycloak_auth ()
 {
+    echo "======= get_keycloak_auth ========"
+
     export ADMIN_USERNAME=$(oc get secrets credential-stocktrader-keycloak -n keycloak -ojson | jq -r '.data.ADMIN_USERNAME'| base64 -d)
     export ADMIN_PASSWORD=$(oc get secrets credential-stocktrader-keycloak -n keycloak -ojson | jq -r '.data.ADMIN_PASSWORD' | base64 -d)
 
@@ -94,11 +109,13 @@ get_keycloak_auth ()
 create_keycloak_roles ()
 {
 
+    echo "======= create_keycloak_roles ========"
     echo "Existing roles in ${AUTH_REALM}"
     curl -s -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
       -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
 
 
+    echo ""
     echo "Creating our Keycloak Roles api-admins api-users admins"
 
     for new_role in api-admins api-users admins 
@@ -110,11 +127,13 @@ create_keycloak_roles ()
           -d "${JSON}"
 
     done
+    echo ""
 
 }
 
 create_keycloak_user ()
 {
+    echo "======= create_keycloak_user ========"
 
     echo "Existing users in ${AUTH_REALM}"
     curl -s -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
@@ -190,6 +209,7 @@ JSON='
 # We need to create the client config for our tradr app
 create_keycloak_client ()
 {
+    echo "======= create_keycloak_client ========"
 
     # Debug code to pull existing clients back
     #curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/clients \
@@ -198,6 +218,7 @@ create_keycloak_client ()
 
     TRADR_URL=https://$(oc get route tradr -n daytrader --template='{{ .spec.host }}')
 
+    echo "Creating our Keycloak client config for the tradr app"
     echo "Creating our Keycloak client config for the tradr app"
 
         JSON="
@@ -220,16 +241,24 @@ create_keycloak_client ()
 
 }
 
+delete_kafka ()
+{
+    echo "======= delete_kafka ========"
+
+    oc delete -k k8s/kafka/prod
+
+}
 
 deploy_kafka ()
 {
+    echo "======= deploy_kafka ========"
 
     oc apply -k k8s/kafka/prod
-    sleep 10s
+    sleep 40s
 
     oc get pods --show-labels
     oc_wait_for pod daytrader app.kubernetes.io/instance
-    sleep 20s
+    sleep 60s
     oc_wait_for pod daytrader-entity-operator strimzi.io/name
     sleep 20s
 }
@@ -243,6 +272,7 @@ deploy_kafka ()
 kafka_mirror_maker ()
 {
 
+    echo "======= kafka_mirror_maker ========"
     # If we're not on AWS this should be non-zero
     KAFKA_ROUTE=$(oc get svc -n daytrader daytrader-kafka-external-bootstrap \
                   -n daytrader \
@@ -270,6 +300,7 @@ kafka_mirror_maker ()
 deploy_database ()
 {
     
+    echo "======= deploy_database ========"
     kustomize build $PROJECT_HOME/k8s/db/prod | oc apply -f -
 
     # Need to implement a delay here while we wait for psql to load
@@ -287,6 +318,7 @@ deploy_database ()
 delete_database ()
 {
 
+    echo "======= delete_database ========"
     kustomize build $PROJECT_HOME/k8s/db/prod | oc delete -f -
 
 }
@@ -294,14 +326,15 @@ delete_database ()
 deploy_apps ()
 {
 
+    echo "======= deploy_apps ========"
     kustomize build $PROJECT_HOME/k8s/stock-quote/prod | oc apply -f -
 
     kustomize build $PROJECT_HOME/k8s/portfolio/prod | oc apply -f -
 
   
-    KEYCLOAK_ROUTE=$(oc get route -n keycloak keycloak -o=jsonpath='{.spec.host}')
-    oc set env -n daytrader deploy/quarkus-portfolio
-    QUARKUS_OIDC_AUTH_SERVER_URL="https://$KEYCLOAK_ROUTE/auth/realms/stocktrader"
+    KEYCLOAK_ROUTE=$(oc get route -n keycloak keycloak -o=jsonpath='{.spec.host}') 
+    oc set env -n daytrader deploy/quarkus-portfolio \
+        QUARKUS_OIDC_AUTH_SERVER_URL="https://$KEYCLOAK_ROUTE/auth/realms/stocktrader"
     echo "Wait 5 seconds for quarkus-portfolio to re-deploy"
     sleep 5s
 
@@ -325,6 +358,7 @@ deploy_apps ()
 
 check_status ()
 {
+    echo "======= check_status ========"
     export TRADER_ROUTE="https://$(oc get route -n ${OCP_NAMESPACE} tradr -o jsonpath='{.spec.host}')"
 
     echo ""
@@ -360,6 +394,7 @@ case "$1" in
 
         deploy_apps
 
+        get_keycloak_auth 
         create_keycloak_client
         create_keycloak_user 
         check_status
@@ -371,6 +406,7 @@ case "$1" in
         ;;
   delete|cleanup|remove)
         delete_database
+        delete_keycloak 
         ;;
   *)
         echo "Usage: $N {deploy|status|remove|cleanup}" >&2
