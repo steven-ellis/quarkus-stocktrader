@@ -88,15 +88,15 @@ get_keycloak_auth ()
 
     CLIENT_ID=admin-cli
     GRANT_TYPE=password
-    KEYCLOAK_AUTH_TOKEN=$( curl -d "client_id=$CLIENT_ID" -d "username=${ADMIN_USERNAME}" -d "password=${ADMIN_PASSWORD}" -d "grant_type=$GRANT_TYPE" "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" | jq '.access_token' | sed s/\"//g)
+    KEYCLOAK_AUTH_TOKEN=$( curl -s -d "client_id=$CLIENT_ID" -d "username=${ADMIN_USERNAME}" -d "password=${ADMIN_PASSWORD}" -d "grant_type=$GRANT_TYPE" "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" | jq '.access_token' | sed s/\"//g)
 }
 
 create_keycloak_roles ()
 {
 
     echo "Existing roles in ${AUTH_REALM}"
-    curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
-      -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+    curl -s -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
+      -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
 
 
     echo "Creating our Keycloak Roles api-admins api-users admins"
@@ -104,8 +104,8 @@ create_keycloak_roles ()
     for new_role in api-admins api-users admins 
     do
         JSON="{\"name\": \"$new_role\"}"
-        curl -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
-          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+        curl -s -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
+          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
           -H 'Content-Type: application/json' \
           -d "${JSON}"
 
@@ -117,8 +117,8 @@ create_keycloak_user ()
 {
 
     echo "Existing users in ${AUTH_REALM}"
-    curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
-      -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+    curl -s -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
+      -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
     | jq . -
 
 JSON='
@@ -142,26 +142,26 @@ JSON='
     echo "Creating our Keycloak user user1"
 
         #JSON="{\"name\": \"$new_role\"}"
-        curl -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
-          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+        curl -s -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
+          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
           -H 'Content-Type: application/json' \
           -d "${JSON}"
 
 #          -d '{"firstName":"Dummy","lastName":"User", "email":"test@test.com", "enabled":"true", "username":"user1", "realmRoles":["api-admins"]}'
 
 
-    USER_ID=$(curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
-              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+    USER_ID=$(curl -s -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users \
+              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
             | jq  -r '.[] | select(.username=="user1") | .id')
 
     echo "User user1 has ID ${USER_ID}"
 
-    curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
-              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+    curl -s -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
+              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
     | jq . -
 
-    ROLE_ID=$(curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
-              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+    ROLE_ID=$(curl -s -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/roles \
+              -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
             | jq  -r '.[] | select(.name=="api-admins") | .id')
 
     echo "Role api-admins has ID ${ROLE_ID}"
@@ -179,8 +179,8 @@ JSON='
     echo "Add role api-admins to user user1"
     echo "Using JSON ${JSON}"
 
-        curl -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users/${USER_ID}/role-mappings/realm \
-          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+        curl -s -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/users/${USER_ID}/role-mappings/realm \
+          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
           -H 'Content-Type: application/json' \
           -d "${JSON}"
 
@@ -193,7 +193,7 @@ create_keycloak_client ()
 
     # Debug code to pull existing clients back
     #curl -X GET ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/clients \
-      #-H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+      #-H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
     #| jq . -
 
     TRADR_URL=https://$(oc get route tradr -n daytrader --template='{{ .spec.host }}')
@@ -212,8 +212,8 @@ create_keycloak_client ()
 "
 	#echo $JSON
 	#echo $JSON | jq . -
-        curl -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/clients \
-          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN=}" \
+        curl -s -X POST ${KEYCLOAK_URL}/admin/realms/${AUTH_REALM}/clients \
+          -H "Authorization: Bearer ${KEYCLOAK_AUTH_TOKEN}" \
           -H 'Content-Type: application/json' \
           -d "${JSON}"
 
@@ -225,7 +225,13 @@ deploy_kafka ()
 {
 
     oc apply -k k8s/kafka/prod
+    sleep 10s
 
+    oc get pods --show-labels
+    oc_wait_for pod daytrader app.kubernetes.io/instance
+    sleep 20s
+    oc_wait_for pod daytrader-entity-operator strimzi.io/name
+    sleep 20s
 }
 
 
@@ -239,12 +245,12 @@ kafka_mirror_maker ()
 
     # If we're not on AWS this should be non-zero
     KAFKA_ROUTE=$(oc get svc -n daytrader daytrader-kafka-external-bootstrap \
-                  -n daytrader
+                  -n daytrader \
                   -ojsonpath='{.status.loadBalancer.ingress[0].ip}')
 
     if [ "${KAFKA_ROUTE}" = "" ]; then
         KAFKA_ROUTE=$(oc get svc -n daytrader daytrader-kafka-external-bootstrap \
-                      -n daytrader
+                      -n daytrader \
                       -ojsonpath='{.status.loadBalancer.ingress[0].hostname}')
          echo "Running on AWS"
     else
@@ -339,15 +345,19 @@ check_oc_login
 
 case "$1" in
   deploy)
-        #deploy_keycloak
+        deploy_keycloak
         get_keycloak_auth 
-        #create_keycloak_roles
+        create_keycloak_roles
 
         deploy_kafka
+
+        deploy_database
+
+        # We use this order to give time for the
+        # LoadBalancers to come up
         kafka_mirror_maker 
 
 
-        deploy_database
         deploy_apps
 
         create_keycloak_client
@@ -363,7 +373,7 @@ case "$1" in
         delete_database
         ;;
   *)
-        echo "Usage: $N {setup|status|remove|cleanup}" >&2
+        echo "Usage: $N {deploy|status|remove|cleanup}" >&2
         exit 1
         ;;
 esac
