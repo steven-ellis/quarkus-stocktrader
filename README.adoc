@@ -269,6 +269,8 @@ The default image registry is `quay.io/kameshsampath`, you can edit $PROJECT_HOM
 
 As `tradr` is a static Single Page Application, it is required to update the environment and rebuild it:
 
+Building Using Docker / Maven
+
 [source,bash]
 ----
 export KEYCLOAK_ROUTE
@@ -276,6 +278,21 @@ cd ${PROJECT_HOME}/tradr
 envsubst  < ${PROJECT_HOME}/tradr/.env.example > ${PROJECT_HOME}/tradr/.env
 cd ..
 make tradr_image_build_push
+----
+
+
+Building suing Buildah
+
+[source,bash]
+----
+# Assumes we're already logged into quay.io via
+# buildah login -u="sellisnz" -p="<my token>" quay.io
+#
+# run the build
+cd tradr
+buildah build-using-dockerfile --no-cache -t quay.io/sellisnz/tradr:latest .
+buildah push quay.io/sellisnz/tradr:latest
+cd ..
 ----
 
 Now update the `$PROJECT_HOME/k8s/tradr/base/deployment.yaml` image to match the tradr image that you rebuilt.
