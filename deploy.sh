@@ -265,7 +265,7 @@ deploy_kafka ()
 
     oc get pods --show-labels
     oc_wait_for pod daytrader app.kubernetes.io/instance
-    sleep 60s
+    sleep 90s
     oc_wait_for pod daytrader-entity-operator strimzi.io/name
     sleep 20s
 }
@@ -294,14 +294,22 @@ kafka_mirror_maker ()
          echo "Not on AWS"
     fi
     echo "Kafka Route = ${KAFKA_ROUTE}"
+
+    if [ "${KAFKA_ROUTE}" = "" ]; then
+        echo "ERROR - We don't have a valid Kafka Route, deployment will fail" >&2 >&2 >&2
+        exit
+    fi
  
     cat $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker-example.yaml |\
-    sed "s/<legacy bootstrap address>/20.197.67.109/" |\
+    sed "s/<legacy bootstrap address>/20.198.214.17/" |\
     sed "s/<modern bootstrap address>/${KAFKA_ROUTE}/" |\
     cat > $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml
 
     # Deploy mirror maker
     kustomize build $PROJECT_HOME/k8s/kafka-mirrormaker/prod | oc apply -f -
+
+    sleep 60s
+    oc_wait_for pod daytrader-mirror-maker2 app.kubernetes.io/instance
 }
     
 deploy_database ()
@@ -315,7 +323,7 @@ deploy_database ()
 
     # Importing DB Schema
     PSQL_POD=$(oc get pods -n daytrader -l "app=postgresql" -o jsonpath='{.items[0].metadata.name}')
-    oc -n daytrader rsh ${PSQL_POD} psql -d tradedb < db/schema.sql
+    oc -n daytrader rsh ${PSQL_POD} psql --user tradedb -d tradedb < db/schema.sql
 }
 
 
