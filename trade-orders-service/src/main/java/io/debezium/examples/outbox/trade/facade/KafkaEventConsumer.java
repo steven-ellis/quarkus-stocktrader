@@ -34,6 +34,7 @@ public class KafkaEventConsumer {
         return CompletableFuture.runAsync(() -> {
                 LOG.info(message.getPayload());
                 orderEventHandler.onOrderEvent(message.getPayload());
+                message.ack();
         });
     }
 }
