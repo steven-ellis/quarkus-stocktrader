@@ -362,6 +362,13 @@ deploy_apps ()
     
     sleep 2s
     #oc_wait_for route trade-orders  app 
+
+    echo "Our API endpoint for the Quarkus portfolio API endpoint is"
+    echo "https://$(oc get route -n daytrader portfolio -o jsonpath='{.spec.host}')/api/portfolios"
+    echo
+    echo "If this is a new environment you will need to rebuild your tradr application using"
+    PORTFOLIO_ROUTE="$(oc get route -n daytrader portfolio -o jsonpath='{.spec.host}')"
+    echo "PORTFOLIO_ROUTE=${PORTFOLIO_ROUTE}"
  
     echo "We currently assume the Tradr app has been uploaded to Quay"
     kustomize build $PROJECT_HOME/k8s/tradr/prod | oc apply -f -

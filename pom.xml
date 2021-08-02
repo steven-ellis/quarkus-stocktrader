@@ -27,7 +27,7 @@
     <jkube.build.strategy>jib</jkube.build.strategy>
     <jkube.enricher.jkube-controller.pullPolicy>Always</jkube.enricher.jkube-controller.pullPolicy>
     <kubernetes-maven-plugin.version>1.3.0</kubernetes-maven-plugin.version>
-    <jkube.generator.name>quay.io/kameshsampath/%a:%v</jkube.generator.name>
+    <jkube.generator.name>quay.io/sellisnz/%a:%v</jkube.generator.name>
   </properties>
   <dependencyManagement>
     <dependencies>

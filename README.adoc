@@ -12,6 +12,11 @@ The https://github.com/IBMStockTrader[IBMStockTrader] application rebuilt with h
 * https://maven.apache.org[Maven 3.6.3+]
 * https://www.gnu.org/software/gettext/[gettext]
 
+If you're running on Fedora you may also require
+
+* buildah
+* https://github.com/ec4j/editorconfig-maven-plugin[editorconfig] maven plugin
+
 == Prepare Cluster
 
 Ensure the following operators are installed in cluster:
@@ -254,6 +259,17 @@ And now check the pod to be restarted:
 oc get pods -n daytrader -lapp=quarkus-portfolio -w
 ----
 
+We also need to make sure we've got the correct endpoint for a **Tradr** app to communicate
+with the quarkus-portfolio web service
+
+
+[source,bash]
+----
+echo "https://$(oc get route -n daytrader portfolio -o jsonpath='{.spec.host}')/api/portfolios"
+
+PORTFOLIO_ROUTE="$(oc get route -n daytrader portfolio -o jsonpath='{.spec.host}')"
+----
+
 === link:./trade-orders-service[Trader Orders]
 [source,bash]
 ----
@@ -274,6 +290,7 @@ Building Using Docker / Maven
 [source,bash]
 ----
 export KEYCLOAK_ROUTE
+export PORTFOLIO_ROUTE
 cd ${PROJECT_HOME}/tradr
 envsubst  < ${PROJECT_HOME}/tradr/.env.example > ${PROJECT_HOME}/tradr/.env
 cd ..
@@ -285,11 +302,15 @@ Building suing Buildah
 
 [source,bash]
 ----
+# Same initial Steps
+export KEYCLOAK_ROUTE
+export PORTFOLIO_ROUTE
+cd tradr
+envsubst  < ${PROJECT_HOME}/tradr/.env.example > ${PROJECT_HOME}/tradr/.env
 # Assumes we're already logged into quay.io via
 # buildah login -u="sellisnz" -p="<my token>" quay.io
 #
 # run the build
-cd tradr
 buildah build-using-dockerfile --no-cache -t quay.io/sellisnz/tradr:latest .
 buildah push quay.io/sellisnz/tradr:latest
 cd ..
