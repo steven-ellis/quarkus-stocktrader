@@ -47,14 +47,9 @@ spec:
             - name: PG_MAX_WAL_SIZE
               value: "4"
           volumeMounts:
-            - mountPath: /pgdata
+            - mountPath: /var/lib/pgsql/data
               name: pgdata
-            - mountPath: /pgwal
-              name: pgwal
       volumes:
         - name: pgdata
           persistentVolumeClaim:
             claimName: pgdata-pvc
-        - name: pgwal
-          persistentVolumeClaim:
-            claimName: pgwal-pvc
