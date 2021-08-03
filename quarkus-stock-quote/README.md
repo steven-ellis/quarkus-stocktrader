@@ -6,7 +6,7 @@ oc new-project daytrader-dev
 
 ## Create the API Key Secret
 ```shell script
-oc create secret generic quarkus-portfolio --from-literal=IEX_API_KEY=$IEX_API_KEY
+oc create secret generic quarkus-stock-quote --from-literal=IEX_API_KEY=$IEX_API_KEY
 ```
 
 ## Create OpenShift Application
