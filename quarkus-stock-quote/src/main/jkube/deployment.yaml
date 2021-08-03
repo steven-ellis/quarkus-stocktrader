@@ -15,6 +15,6 @@ spec:
             valueFrom:
               secretKeyRef:
                 key: IEX_API_KEY
-                name: quarkus-portfolio
+                name: quarkus-stock-quote
           imagePullPolicy: Always
           
