@@ -436,6 +436,55 @@ tradr   tradr-daytrader.apps.gcp.kameshs.dev          tradr      8080   edge    
 
 To be able to login into the application you might need to create the Keycloak client called `tradr`, login to the Keycloak console as did earlier and add a new client called `tradr` under realm `stocktrader` with root URL set to value of `tradr` OpenShift route. 
 
+==  Troubleshooting
+
+=== PSQL Container crashing
+
+If the PostgreSQL contain isn't running correctly there might be a permission issue with the storage
+
+=== Order Data isn't syncing
+
+This usually occurs if the trader-orders app isn't polling the correct endpoints. You can tail the
+pod logs while generating fresh orders from the https://github.com/steven-ellis/sample.daytrader8[legacy daytrader] app.
+
+[source,bash]
+----
+TRADE_ORDERS_POD=$(oc get pods -n daytrader -l "app=trade-orders-service" \
+  -o jsonpath='{.items[0].metadata.name}')
+oc logs -n daytrader -f ${TRADE_ORDERS_POD}
+----
+
+=== Tradr UI doesn't authenticate
+
+This usually because you don't have the correct keycloak endpoint in the 
+link:./tradr/.env[Tradr Build Environment] file, or you haven't uploaded
+a fresh build of tradr for the deployment.
+
+Refer to the Tradr build documentation above
+
+=== Tradr UI isn't rendering the user data
+ 
+If you login but the UI isn't rendering correctly check the logs of
+the portfiolo service to see if there are JVM errors.
+
+[source,bash]
+----
+PORTFOLIO_POD=$(oc get pods -n daytrader -l "app=quarkus-portfolio" \
+  -o jsonpath='{.items[0].metadata.name}')
+oc logs -n daytrader -f ${PORTFOLIO_POD}
+
+# If JVM is showing issues force the pod to be re-depoyed
+oc delete pod -n daytrader ${PORTFOLIO_POD}
+----
+
+In addition you can query the portfolio service to see if there are valid entries via
+
+[source,bash]
+----
+PORTFOLIO_ROUTE="$(oc get route -n daytrader portfolio -o jsonpath='{.spec.host}')"
+curl "https://${PORTFOLIO_ROUTE}/api/portfolios/all"
+----
+
 ==  Development 
 === Building Application Container Images
 
