@@ -99,7 +99,7 @@ oc get all -n daytrader
 
 == Manual Deployment
 
-== Deploy Keycloak
+=== Deploy Keycloak
 
 For more details on using Keycloak with OpenShift reference https://www.keycloak.org/getting-started/getting-started-openshift
 
@@ -147,14 +147,14 @@ echo "Credentials ${ADMIN_USERNAME} : ${ADMIN_PASSWORD}" &&
 echo "" 
 ----
 
-== Deploy Kafka
+=== Deploy Kafka
 
 [source,shell script]
 ----
 oc apply -k k8s/kafka/prod
 ----
 
-=== Kafka Mirror Maker
+==== Kafka Mirror Maker
 
 [IMPORTANT]
 ====
@@ -173,7 +173,7 @@ Edit and update the `$PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrorma
 The Kafka cluster *bootstrapservers* can be retrieved using the command:
 
 
-==== Legacy Cluster 
+===== Legacy Cluster 
 
 The legacy cluster is identified by alias `daytrader-kafka-legacy` in the file
 `$PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml`, and the bootstrap address found by the following command need to be updated as the value for `daytrader-kafka-legacy.bootstrapServers`:
@@ -195,7 +195,7 @@ oc get svc -n daytrader daytrader-kafka-external-bootstrap \
 ----
 ====
 
-==== Modern App Cluster 
+===== Modern App Cluster 
 
 The legacy cluster is identified by alias `daytrader-kafka-modern` in the file
 `$PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml`, and the bootstrap address found by the following command need to be updated as the value for `daytrader-kafka-modern.bootstrapServers`:
@@ -222,9 +222,9 @@ oc get svc -n daytrader daytrader-kafka-external-bootstrap \
 kustomize build $PROJECT_HOME/k8s/kafka-mirrormaker/prod | oc apply -f -
 ----
 
-== Deploy Modules
+=== Deploy Modules
 
-=== Prepare Database
+==== Prepare Database
 
 [source,bash]
 ----
@@ -248,7 +248,7 @@ PSQL_POD=$(oc get pods -n daytrader -l "app=postgresql" -o jsonpath='{.items[0].
 oc -n daytrader rsh ${PSQL_POD} psql --user tradedb -d tradedb < db/schema.sql
 ----
 
-=== API Key
+==== API Key
 
 Obtain an API Key from https://iexcloud.io/[IEXCloud], copy the file  link:./k8s/stock-quote/base/api-keys.env.example[ $PROJECT_HOME/k8s/stock-quote/base/api-keys.env.example] to
 `$PROJECT_HOME/k8s/stock-quote/base/api-keys.env`:
@@ -260,13 +260,13 @@ cp $PROJECT_HOME/k8s/stock-quote/base/api-keys.env.example $PROJECT_HOME/k8s/sto
 
 Edit and update the _IEX_API_KEY_ key in the file `$PROJECT_HOME/k8s/stock-quote/base/api-keys.env` to match your API Key.
 
-=== link:./quarkus-stock-quote[StockQuote]
+==== link:./quarkus-stock-quote[StockQuote]
 [source,bash]
 ----
 kustomize build $PROJECT_HOME/k8s/stock-quote/prod | oc apply -f -
 ----
 
-=== link:./quarkus-portfolio[Portfolio]
+==== link:./quarkus-portfolio[Portfolio]
 [source,bash]
 ----
 kustomize build $PROJECT_HOME/k8s/portfolio/prod | oc apply -f -
@@ -314,13 +314,13 @@ echo "https://$(oc get route -n daytrader portfolio -o jsonpath='{.spec.host}')/
 PORTFOLIO_ROUTE="$(oc get route -n daytrader portfolio -o jsonpath='{.spec.host}')"
 ----
 
-=== link:./trade-orders-service[Trader Orders]
+==== link:./trade-orders-service[Trader Orders]
 [source,bash]
 ----
 kustomize build $PROJECT_HOME/k8s/trade-orders-service/prod | oc apply -f -
 ----
 
-=== link:./tradr[Tradr]
+==== link:./tradr[Tradr]
 
 [NOTE]
 ====
@@ -402,11 +402,11 @@ trade-orders-service-64fcb6dd98-27nk6                  1/1     Running   0      
 tradr-b55bd7dd-n7r5k                                   1/1     Running   0          17m
 ----
 
-=== Application Routes
+==== Application Routes
 
 NOTE: The application domain may vary according to your deployment
 
-==== Kafka Data Replication App
+===== Kafka Data Replication App
 
 [source,bash]
 ----
@@ -419,7 +419,7 @@ NAME            HOST/PORT                                      PATH   SERVICES  
 trader-orders   trader-orders-daytrader.apps.gcp.kameshs.dev          trade-orders-service   8080   edge          None
 ----
 
-==== Modernized UI App
+===== Modernized UI App
 
 [source,bash]
 ----
@@ -437,7 +437,7 @@ tradr   tradr-daytrader.apps.gcp.kameshs.dev          tradr      8080   edge    
 To be able to login into the application you might need to create the Keycloak client called `tradr`, login to the Keycloak console as did earlier and add a new client called `tradr` under realm `stocktrader` with root URL set to value of `tradr` OpenShift route. 
 
 ==  Development 
-== Building Application Container Images
+=== Building Application Container Images
 
 [source,bash]
 ----
