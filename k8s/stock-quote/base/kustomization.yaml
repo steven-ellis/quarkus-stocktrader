@@ -3,7 +3,7 @@ generatorOptions:
   disableNameSuffixHash: true
   
 secretGenerator:
-  - name: quarkus-portfolio
+  - name: quarkus-stock-quote
     env: api-keys.env
     type: Opaque
 resources:

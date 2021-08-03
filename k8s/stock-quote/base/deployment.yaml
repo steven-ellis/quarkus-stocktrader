@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: tradr
-        image: quay.io/kameshsampath/quarkus-stock-quote:1.0.0
+        image: quay.io/sellisnz/quarkus-stock-quote:1.0.0
         imagePullPolicy: Always
         env:
           - name: PORT
@@ -25,7 +25,7 @@ spec:
           - name: IEX_API_KEY
             valueFrom:
               secretKeyRef:
-                name: quarkus-portfolio
+                name: quarkus-stock-quote
                 key: IEX_API_KEY
         resources:
           limits:
