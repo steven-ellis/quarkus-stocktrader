@@ -55,6 +55,50 @@ oc whoami
 oc whoami --show-server
 ----
 
+== Scripted Deployment
+
+We now have a scripted deployment approach. This normally takes two steps
+
+- deployment
+- status check
+
+There is still a risk that parts of the deployment time out - so please check
+the log output. 
+
+**Assumptions**
+
+- Required Operators have been deployed
+- Tradr application has been built and updated to match your current OpenShift instances
+- trader-orders service will use the version from quay.io/sellisnz
+- You have pre-populated your _IEX_API_KEY_
+
+[source,shell script]
+----
+# Make sure you're logged into the correct cluster
+./deploy.sh deploy
+
+# To confirm the environment is up correctly
+./deploy.sh status
+
+----
+
+The _status_ step should return the URL required to access the application frontend,
+the ability to monitor the kafka data sync via trader-orders,
+and the details required to login to keycloak if you need to debug anything.
+
+If you have any major issues you can force a cleanup up and then re-deploy the environment
+
+[source,shell script]
+----
+./deploy.sh delete
+
+oc get all -n daytrader
+
+./deploy.sh deploy
+----
+
+== Manual Deployment
+
 == Deploy Keycloak
 
 For more details on using Keycloak with OpenShift reference https://www.keycloak.org/getting-started/getting-started-openshift
