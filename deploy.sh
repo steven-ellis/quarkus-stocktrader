@@ -311,6 +311,28 @@ kafka_mirror_maker ()
     sleep 60s
     oc_wait_for pod daytrader-mirror-maker2 app.kubernetes.io/instance
 }
+
+
+reset_environment ()
+{
+    echo "======= reset_environment ========"
+
+    echo "Flush the tradeorders table"
+    PSQL_POD=$(oc get pods -n daytrader -l "app=postgresql" -o jsonpath='{.items[0].metadata.name}')
+    oc -n daytrader rsh ${PSQL_POD} psql --user tradedb -d tradedb < db/clean.sql
+
+    echo "Shutdown some key pods"
+
+    oc delete pod -l "app=quarkus-portfolio"
+    oc delete pod -l "app=quarkus-stock-quote"
+    oc delete pod -l "app=trade-orders-service"
+
+    echo "Check pods are back up"
+
+    oc_wait_for pod quarkus-stock-quote app 
+    oc_wait_for pod quarkus-portfolio   app 
+    oc_wait_for pod trade-orders-service  app 
+}
     
 deploy_database ()
 {
@@ -429,12 +451,16 @@ case "$1" in
         check_status
         get_keycloak_auth 
         ;;
+  reset)
+        reset_environment
+        check_status
+        ;;
   delete|cleanup|remove)
         delete_database
         delete_keycloak 
         ;;
   *)
-        echo "Usage: $N {deploy|status|remove|cleanup}" >&2
+        echo "Usage: $N {deploy|status|delete|reset}" >&2
         exit 1
         ;;
 esac
