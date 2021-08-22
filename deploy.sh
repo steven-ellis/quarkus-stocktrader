@@ -1,5 +1,4 @@
 #!/bin/bash
-
 #
 # Deployment wrapper for the Quarkus Stocktrader application
 #
@@ -10,6 +9,8 @@
 AUTH_REALM=stocktrader
 PROJECT_HOME=`pwd`
 OCP_NAMESPACE=daytrader
+
+LEGACY_ROUTE=20.198.150.180
 
 # oc_wait_for 
 #
@@ -301,7 +302,7 @@ kafka_mirror_maker ()
     fi
  
     cat $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker-example.yaml |\
-    sed "s/<legacy bootstrap address>/20.198.214.17/" |\
+    sed "s/<legacy bootstrap address>/${LEGACY_ROUTE}/" |\
     sed "s/<modern bootstrap address>/${KAFKA_ROUTE}/" |\
     cat > $PROJECT_HOME/k8s/kafka-mirrormaker/base/daytrader-mirrormaker.yaml
 
