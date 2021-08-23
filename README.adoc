@@ -454,6 +454,30 @@ TRADE_ORDERS_POD=$(oc get pods -n daytrader -l "app=trade-orders-service" \
 oc logs -n daytrader -f ${TRADE_ORDERS_POD}
 ----
 
+If you're still having issues make sure the queues on the legacy app are working correctly. Login to the 
+OpenShift environment for your legacy services - then try
+
+[source,bash]
+----
+oc project daytrader
+oc rsh pod/daytrader-kafka-0
+
+# you're now inside a kafka pod
+
+./bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic daytrader-kafka-legacy.openshift.traderdb.accountprofileejb --from-beginning --max-messages 10
+
+# If this still doesn't work check the consumer groups
+./bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
+
+# And list the topics
+bin/kafka-topics.sh --bootstrap-server localhost:9092 --list 
+
+----
+
+Sometimes the *kafka-console-consumer.sh* command is enought to get the queue working again.
+
+*NOTE* Make sure you log back into the modern OpenShift cluster once you've finished troubleshooting.
+
 === Tradr UI doesn't authenticate
 
 This usually because you don't have the correct keycloak endpoint in the 
