@@ -68,23 +68,35 @@ the log output.
 **Assumptions**
 
 - Required Operators have been deployed
-- Tradr application has been built and updated to match your current OpenShift instances
+- Tradr application has been built and updated to match your current OpenShift instances, or you used the _build_tradr_ option below.
 - trader-orders service will use the version from quay.io/sellisnz
 - You have pre-populated your _IEX_API_KEY_
 
 [source,shell script]
 ----
 # Make sure you're logged into the correct cluster
+oc whoami --show-server
+
+# Then deploy the service and configure identities in Keycloak
 ./deploy.sh deploy
 
 # To confirm the environment is up correctly
 ./deploy.sh status
-
 ----
 
 The _status_ step should return the URL required to access the application frontend,
 the ability to monitor the kafka data sync via trader-orders,
 and the details required to login to keycloak if you need to debug anything.
+
+If this is a new Openshift environment build and re-deploy
+the Tradr WebUI with the correct configuration
+
+*Note* this assumes you're already logged into quay.io
+
+[source,shell script]
+----
+./deploy.sh build_tradr
+----
 
 If you have any major issues you can force a cleanup up and then re-deploy the environment
 
@@ -95,6 +107,14 @@ If you have any major issues you can force a cleanup up and then re-deploy the e
 oc get all -n daytrader
 
 ./deploy.sh deploy
+----
+
+If the OpenShift environment has been restarted some of the pods can get into an unstable state.
+This can usually be resolved by running
+
+[source,shell script]
+----
+./deploy.sh reset
 ----
 
 == Manual Deployment

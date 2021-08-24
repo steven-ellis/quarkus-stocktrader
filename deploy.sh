@@ -510,7 +510,7 @@ case "$1" in
         delete_keycloak 
         ;;
   *)
-        echo "Usage: $N {deploy|status|delete|reset}" >&2
+        echo "Usage: $N {deploy|status|delete|reset|build_tradr}" >&2
         exit 1
         ;;
 esac
