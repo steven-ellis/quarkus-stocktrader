@@ -313,6 +313,50 @@ kafka_mirror_maker ()
     oc_wait_for pod daytrader-mirror-maker2 app.kubernetes.io/instance
 }
 
+build_tradr ()
+{
+
+    echo "======= Rebuild Tradr App ========"
+
+    echo "Get the required environment variables"
+    KEYCLOAK_ROUTE=$(oc get route -n keycloak keycloak -o=jsonpath='{.spec.host}')
+    PORTFOLIO_ROUTE="$(oc get route -n daytrader portfolio -o jsonpath='{.spec.host}')"
+
+   
+   if [ "${KEYCLOAK_ROUTE}" == "" ] || [ "${PORTFOLIO_ROUTE}" == "" ]; then
+      echo "Check your environment"
+      echo "KEYCLOAK_ROUTE= ${KEYCLOAK_ROUTE}"
+      echo "PORTFOLIO_ROUTE= ${PORTFOLIO_ROUTE}"
+      exit 1
+   fi
+
+    echo "Note we currently only build using buildah on Linux"
+    echo "Also assumption we're already logged into Quay.io"
+    
+    export KEYCLOAK_ROUTE
+    export PORTFOLIO_ROUTE
+    cd tradr
+    envsubst  < ${PROJECT_HOME}/tradr/.env.example > ${PROJECT_HOME}/tradr/.env
+    # Assumes we're already logged into quay.io via
+    # buildah login -u="sellisnz" -p="<my token>" quay.io
+    #
+    # run the build
+    buildah build-using-dockerfile --no-cache -t quay.io/sellisnz/tradr:latest .
+    buildah push quay.io/sellisnz/tradr:latest
+    cd ..
+
+}
+
+redeploy_tradr ()
+{
+    echo "======= Redeploy the Trade WebUI ========"
+
+    oc -n daytrader delete pod -l "app=tradr"
+    sleep 10s
+
+    echo "Check tradr pod is back online"
+    oc_wait_for pod tradr  app 
+}
 
 reset_environment ()
 {
@@ -454,6 +498,11 @@ case "$1" in
         ;;
   reset)
         reset_environment
+        check_status
+        ;;
+  build_tradr)
+        build_tradr
+        redeploy_tradr
         check_status
         ;;
   delete|cleanup|remove)
